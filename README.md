@@ -3,6 +3,9 @@ A tool to convert maps from inside the minecraft game to regular PNG files
 
 **To start credit to DonoA for making [PyAnvil](https://github.com/DonoA/PyAnvilEditor), which is what does a lot of the heavy lifting for this program**
 
+## How to run
+For now the way to run the code is through command prompt. Naviagte to the directory where you have stored all three files and run 'python3 main.py'. From there simply navigate to the map files you wish to convert and hit enter. A new folder will be created in the directory where the map files where stored containing all of the map images.
+
 ## Code Breakdown
 
 This section here opens the dialog box to select any files you want converted, this works for batches of any size.

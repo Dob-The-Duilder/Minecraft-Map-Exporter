@@ -19,11 +19,16 @@ class InputStream:
         return self.buffer[self.pos]
 
 root = tk.Tk()
+root.withdraw()
 paths = filedialog.askopenfilenames(parent=root, title='Choose a file')
 
 colorFile = open('colors.txt', 'r')
 colorList = [line.replace('\n', '') for line in colorFile.readlines()]
 colorFile.close()
+
+folder_path = paths[0].replace(os.path.basename(paths[0]), '') + 'Map Images'
+if not os.path.exists(folder_path):
+    os.makedirs(folder_path)
 
 log = ''
 
@@ -36,7 +41,7 @@ for path in paths:
       map_data = nbt.parse_nbt(in_stream)
       blocksList = map_data.get('data').get('colors').get()
       
-    path = path.replace(mapFile, 'mapImages/' + mapFile)
+    path = path.replace(mapFile, 'Map Images/' + mapFile)
 
     pixels = []
 

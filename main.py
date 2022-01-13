@@ -53,7 +53,7 @@ for path in paths:
           pixels[y].append(eval(colorList[num]))
         elif(num < 0):
           #The +4 in this is due to minecraft only using 248 of the 256 avalible colors
-          pixels[y].append(eval(colorList[num+4]))
+          pixels[y].append(eval(colorList[num+8]))
         else:
           log = log + str(num) + '\n'
           pixels[y].append((00, 00, 00))

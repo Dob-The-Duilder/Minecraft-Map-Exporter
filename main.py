@@ -65,3 +65,6 @@ for path in paths:
     # Use PIL to create an image from the new array of pixels
     new_image = Image.fromarray(array, 'RGB')
     new_image.save(path.replace(mapFile, '') + 'map_' + str(mapInt) + '.png')
+    
+    if(log != ''):
+        print(log)

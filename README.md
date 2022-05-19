@@ -9,7 +9,7 @@ A tool to convert maps from inside the minecraft game to regular PNG files
 Naviagte to the directory where you have stored all three files and run 'python3 main.py'. A GUI should open and there are labeled buttons on the top to help you. If is your first time running the program it may ask you to assign some settings, these are important to the functionality of the program and should not be skipped.
 
 ### - Beta Downloads
-This is the easiest way to run the program as it is compiled into a windows program. Windows may flag the software as dangerous but I assure everyone it is completly safe. Feel free to ispect the source code yourself. Other than that, the software is pretty self explanitory.
+This is the easiest way to run the program is with the compiled windows program. Windows may flag the software as dangerous but I assure everyone it is completly safe. Feel free to ispect the source code yourself. Other than that, the software is pretty self explanitory.
 
 ## Code Breakdown
 

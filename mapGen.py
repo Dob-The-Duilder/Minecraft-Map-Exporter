@@ -40,59 +40,56 @@ class InputStream:
     def peek(self):
         return self.buffer[self.pos]
 
-def makeMaps(pathSetting, paths, merge, extras):
-    folder_path = pathSetting + '/Map Images'
+def makeMaps(pathSetting, path, merge, extras):
+    folder_path = pathSetting
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
 
     coordsX, coordsZ, imgList, sizList = [], [], [], []
+    
+    mapInt = os.path.basename(path).replace('map_','').replace('.dat','')
 
-    t0 = time.time()
-    for path in paths:
-        mapInt = os.path.basename(path).replace('map_','').replace('.dat','')
-
-        with gzip.open(path, mode='rb') as map:
-            in_stream = InputStream(map.read())
-            map_data = parse_nbt(in_stream)      
-            blocksList = tuple(map_data.get('data').get('colors').get())
-            if (bool(merge) == True) or (bool(extras) == True):
-                coordsX.append(map_data.get('data').get('xCenter').get())
-                coordsZ.append(map_data.get('data').get('zCenter').get())
-                sizList.append(map_data.get('data').get('scale').get())
+    with gzip.open(path, mode='rb') as map:
+        in_stream = InputStream(map.read())
+        map_data = parse_nbt(in_stream)      
+        blocksList = tuple(map_data.get('data').get('colors').get())
+        if (bool(merge) == True) or (bool(extras) == True):
+            coordsX.append(map_data.get('data').get('xCenter').get())
+            coordsZ.append(map_data.get('data').get('zCenter').get())
+            sizList.append(map_data.get('data').get('scale').get())
+            try:    
                 banList = str(map_data.get('data').get('banners'))
                 frmList = str(map_data.get('data').get('frames'))
+            except:
+                banList = 'N'
+                frmList = 'N'
+    pixels = []
 
-        pixels = []
-
-        for y in range(0, 128, 1):
-          pixels.append([])
-          for x in range(0, 128, 1):
-            num = int(blocksList[(y*128) + x])
-            if(0 < num < 129):
-              pixels[y].append(colorTuple[num])
-            elif(num < 0):
-              #The +4 in this is due to minecraft only using 248 of the 256 avalible colors
-              pixels[y].append(colorTuple[num+8])
-            else:
-              pixels[y].append((214, 190, 150))
+    for y in range(0, 128, 1):
+      pixels.append([])
+      for x in range(0, 128, 1):
+        num = int(blocksList[(y*128) + x])
+        if(0 < num < 129):
+          pixels[y].append(colorTuple[num])
+        elif(num < 0):
+          #The +4 in this is due to minecraft only using 248 of the 256 avalible colors
+          pixels[y].append(colorTuple[num+8])
+        else:
+          pixels[y].append((214, 190, 150))
 
 
-        # Convert the pixels into an array using numpy
-        array = np.array(pixels, dtype=np.uint8)
+    # Convert the pixels into an array using numpy
+    array = np.array(pixels, dtype=np.uint8)
 
-        # Use PIL to create an image from the new array of pixels
-        new_image = Image.fromarray(array, 'RGB')
-        newPath = "".join([folder_path,'/map_',str(mapInt),'.png'])
-        if bool(extras):
-            new_image = extraAdd(banList, frmList, new_image, coordsX, coordsZ)
-        new_image.save(newPath)
-        imgList.append(newPath)
-    t1 = time.time()
-    t = t1-t0
-    if bool(merge):
-        return (imageCombine(coordsX, coordsZ, imgList, sizList, folder_path, merge, t))
-    img = Image.open(folder_path + '/map_' + str(mapInt) + '.png')
-    return[128,128, img, t]
+    # Use PIL to create an image from the new array of pixels
+    new_image = Image.fromarray(array, 'RGB')
+    newPath = "".join([folder_path,'/map_',str(mapInt),'.png'])
+    #if bool(extras):
+        #new_image = extraAdd(banList, frmList, new_image, coordsX, coordsZ)
+    new_image.save(newPath)
+    imgList.append(newPath)
+    
+    return[128,128, new_image]
 
 def extraAdd(banList, frmList, new_image, coordsX, coordsZ):
     banList = banList.replace(" Pos size 3 = {IntTag 'X' = ", '').replace('IntTag ', '').replace(" 'Y' = ", '').replace(" 'Z' = ", '').replace("}], StringTag: Color = '", ',').replace("'}], ", '').replace("'}]]", '').split('CompundTag:')

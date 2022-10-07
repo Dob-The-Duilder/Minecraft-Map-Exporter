@@ -1,4 +1,4 @@
-LoadPath=C:/Users/kilom/AppData/Roaming/.minecraft/saves
-SavesPath=C:/Users/kilom/Desktop/minecraft-map-to-image/Custom Maker/Map Images
-merge=True
-extras=True
+LoadPath=
+SavesPath=
+merge=
+extras=

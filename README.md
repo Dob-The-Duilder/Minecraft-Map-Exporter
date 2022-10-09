@@ -11,7 +11,7 @@ This is the easiest way to run the program is with the compiled windows program.
 ### - Souce Files
 Download everything except the previous builds folder. Naviagte to the directory where you have stored all the files and run 'python3 main.py' in command prompt. A GUI should open and there are labeled buttons on the top to help you.
 
-## Code Breakdown
+## Code Breakdown | *Very outdated*
 
 Apon clicking the "Generate Maps" button a dialog box will apear to select any files you want converted, this works for batches of most sizes (Very large batches can sometimes crash the program).
 ```python

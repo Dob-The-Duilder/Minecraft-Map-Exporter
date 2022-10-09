@@ -1,10 +1,10 @@
-import tkinter, os, sys, time, threading, time
+import tkinter, os, sys, time, threading, time, numpy
 from tkinter import Tk, PhotoImage, constants, filedialog, messagebox
 from tkinter import *
 import tkinter as tk
 from PIL import Image, ImageTk
 from itertools import repeat
-from multiprocessing import Pool
+from multiprocessing import Pool,freeze_support
 from multiprocessing.dummy import Pool as ThreadPool
 
 import mapGen
@@ -19,10 +19,15 @@ def GenerateMaps():
     
     t0 = time.time()
     with Pool() as pool:
-        results = pool.starmap(mapGen.makeMaps, zip(repeat(settingsList[1][1]), fileList, repeat(settingsList[2][1]), repeat(settingsList[3][1])))
+        results = pool.starmap(mapGen.makeMaps, zip(repeat(settingsList[1][1]), fileList, repeat(bool(settingsList[2][1])), repeat(bool(settingsList[3][1]))))
     t1 = time.time()
     print(t1-t0)
-    var = results[0]
+    #[128,128, new_image, size, coordX, coordZ]
+    if bool(settingsList[2][1]):
+        resNew = numpy.swapaxes(numpy.array(results, dtype="object"), 0, 1)
+        results.append(mapGen.imageCombine(resNew[4], resNew[5], resNew[2], resNew[3], settingsList[1][1]))
+    print(results[-1][-1])
+    var = results[-1]
     setBackground(var[0],var[1],var[2])
 
 def setBackground(X,Z,bigImg):
@@ -90,7 +95,8 @@ def newSettings():
     Label(settingsWindow,
           text ="This is a new window").pack()
 
-if __name__ == "__main__":    
+if __name__ == "__main__":
+    freeze_support()
     path = os.path.abspath(__file__)
     local = path.replace(os.path.basename(path), '')
 
@@ -104,8 +110,8 @@ if __name__ == "__main__":
     
     mainScreen = Tk()
 
-    icon = PhotoImage(file = (local + "Graphics\Icon.png"))
-    back = Image.open(local + "Graphics\Icon.png")
+    icon = PhotoImage(file = ("Icon.png"))
+    back = Image.open("Icon.png")
 
     NavBar = Frame(mainScreen)
     NavBar.pack(fill=X)
@@ -119,8 +125,8 @@ if __name__ == "__main__":
     btn2 = Button(NavBar, text="Settings", command = defineSettings)
     btn2.pack(side = 'left')
 
-    btn2 = Button(NavBar, text="Settings", command = newSettings)
-    btn2.pack(side = 'left')
+    #btn2 = Button(NavBar, text="Settings", command = newSettings)
+    #btn2.pack(side = 'left')
 
 
     mainScreen.attributes('-alpha')

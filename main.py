@@ -1,16 +1,79 @@
-import tkinter, os, sys, time, threading, time, numpy
-from tkinter import Tk, PhotoImage, constants, filedialog, messagebox
+import os, time, time, numpy, zoom
+from tkinter import Tk, PhotoImage, filedialog, messagebox
 from tkinter import *
 import tkinter as tk
 from PIL import Image, ImageTk
 from itertools import repeat
+from functools import partial
 from multiprocessing import Pool,freeze_support
-from multiprocessing.dummy import Pool as ThreadPool
 
 import mapGen
+iconDict = {
+    'arrow'     : (0, 0),
+    'mansion'   : (1, 0),
+    'monument'  : (2, 0),
+    'cross'     : (3, 0)}
+bannerDict = {
+    'white'     : (0, 1),
+    'light_gray': (1, 1),
+    'gray'      : (2, 1),
+    'black'     : (3, 1),
+    'red'       : (0, 2),
+    'orange'    : (1, 2),
+    'yellow'    : (2, 2),
+    'lime'      : (3, 2),
+    'green'     : (0, 3),
+    'blue'      : (1, 3),
+    'cyan'      : (2, 3),
+    'light_blue': (3, 3),
+    'pink'      : (0, 4),
+    'magenta'   : (1, 4),
+    'purple'    : (2, 4),
+    'brown'     : (3, 4)
+    }
 
 def error():
-   messagebox.showerror("Error", "Sorry, this is still a work in progress >.<")
+   messagebox.showerror("Error", "A faital error occured.")
+
+def ImageOpen(path, recent):
+    if path == '': path = filedialog.askopenfilename(initialdir = settingsList[1][1], parent=mainScreen, title='Choose an Image File.')
+    newImg = Image.open(path)
+    if recent:
+        setBackground(newImg.width,newImg.height,newImg,path,recent)
+        pass
+    setBackground(newImg.width,newImg.height,newImg,path)
+
+def setBackground(X,Z,bigImg,path,recent = False):
+    global App
+    global background
+    
+    background = bigImg
+
+    try:
+        App.delete()
+    except:
+        pass
+
+    if (X/Z > 4) or (X/Z < 0.25):
+        messagebox.showerror("Error", "Image proportions too large. Your image has been saved but the background has not been updated.")
+        setBackground(256,256,back)
+        pass
+
+    if path != '' and not(recent):
+        settingsFile = open('settings.txt', 'w')
+        settingsList[4].insert(0, path)
+        if len(settingsList[4]) > 5: settingsList[4].pop(5)
+        for setting in settingsList:
+            line = '='.join(setting) + '\n'
+            settingsFile.write(line)
+        settingsFile.close()
+
+    App = zoom.LoadImage(mainScreen, bigImg, path)
+    mainScreen.mainloop()
+
+def saveFile(image, path):
+    App.path = path
+    image.save(path)
 
 def GenerateMaps():
     global settingsList
@@ -21,40 +84,26 @@ def GenerateMaps():
     with Pool() as pool:
         results = pool.starmap(mapGen.makeMaps, zip(repeat(settingsList[1][1]), fileList, repeat(bool(settingsList[2][1])), repeat(bool(settingsList[3][1]))))
     t1 = time.time()
-    print(t1-t0)
-    #[128,128, new_image, size, coordX, coordZ]
     if bool(settingsList[2][1]):
         resNew = numpy.swapaxes(numpy.array(results, dtype="object"), 0, 1)
         results.append(mapGen.imageCombine(resNew[4], resNew[5], resNew[2], resNew[3], settingsList[1][1]))
-    print(results[-1][-1])
+    if len(results[-1][-1]) > 0:
+        messagebox.showerror("Error", results[-1][-1])
+    
     var = results[-1]
-    setBackground(var[0],var[1],var[2])
+        
+    setBackground(var[0],var[1],var[2], var[3])
 
-def setBackground(X,Z,bigImg):
-    global bg
-    try:
-        canvas.delete(bg)
-    except:
-        pass
-    
-    canvas.config(width=X*2, height=Z*2)
-    canvas.pack(side = 'top')
-    
-    if (Z*2+30 <= 1080):
-        mainScreen.geometry('{}x{}'.format((X*2), (Z*2+30)))
-        bigImg = bigImg.resize(((X*2), (Z*2)),Image.Resampling.NEAREST)
+def AddIcons(item, rotation = 0):
+    App.rotation = rotation
+    if App.icon == item:
+        App.icon = None
     else:
-        mainScreen.geometry('{}x{}'.format(X, (Z+30)))
-    
-    img = ImageTk.PhotoImage(bigImg)
-    bg = canvas.create_image( 0, 0, image = img, anchor = "nw")
-    mainScreen.mainloop()
-    
+        App.icon = item
+
 def defineSettings():
     global settingsList
     
-    print(settingsList)
-
     settingsList = []
     settingsList.append(['LoadPath', ''])
     settingsList[0][1] = filedialog.askdirectory(parent=mainScreen, title='Find The Minecraft Saves Folder')
@@ -68,32 +117,44 @@ def defineSettings():
     settingsList.append(['extras', ''])
     settingsList[3][1] = messagebox.askyesno("Extras","Do you want to add map icons?\n(Banners and Item Frame Locations)")
     
-    print(settingsList)
-    
+    settingsList.append(['icon.png'])
+        
     settingsFile = open('settings.txt', 'w')
     
     for setting in settingsList:
-        line = str(setting[0]) + '=' + str(setting[1]) + '\n'
+        line = '='.join(str(e) for e in setting) + '\n'
         settingsFile.write(line)
     settingsFile.close()
     
-def newSettings():
+def newSettings(num, val):
+    settingsList[num][1] = val
+
+    settingsFile = open('settings.txt', 'w')
+    for setting in settingsList:
+        line = '='.join(str(e) for e in setting) + '\n'
+        settingsFile.write(line)
+    settingsFile.close()
      
-    # Toplevel object which will
-    # be treated as a new window
-    settingsWindow = Toplevel(mainScreen)
- 
-    # sets the title of the
-    # Toplevel widget
-    settingsWindow.title("Settings")
-    settingsWindow.iconphoto(False, icon)
- 
-    # sets the geometry of toplevel
-    settingsWindow.geometry("200x200")
- 
-    # A Label widget to show in toplevel
-    Label(settingsWindow,
-          text ="This is a new window").pack()
+
+def endProgram():
+    App.delete()
+    mainScreen.destroy()
+
+class HoverButton(tk.Button):
+    def __init__(self, master, **kw):
+        tk.Button.__init__(self,master=master,**kw)
+        self.defaultBackground = self["background"]
+        self.defaultThick = self['bg']
+        self.bind("<Enter>", self.on_enter)
+        self.bind("<Leave>", self.on_leave)
+
+    def on_enter(self, e):
+        self['background'] = self['activebackground']
+        self['bd'] = -1
+
+    def on_leave(self, e):
+        self['background'] = self.defaultBackground
+        self['bd'] = 0
 
 if __name__ == "__main__":
     freeze_support()
@@ -103,50 +164,109 @@ if __name__ == "__main__":
     if not os.path.exists(local + 'settings.txt'):
         with open(os.path.join(local, 'settings.txt'), 'w') as fp:
             pass
-
-    settingsFile = open('settings.txt', 'r')
-    settingsList = [line.replace('\n', '').split('=') for line in settingsFile.readlines()]
-    settingsFile.close()
     
     mainScreen = Tk()
 
     icon = PhotoImage(file = ("Icon.png"))
     back = Image.open("Icon.png")
 
-    NavBar = Frame(mainScreen)
-    NavBar.pack(fill=X)
+    settingsFile = open('settings.txt', 'r')
+    settingsList = [line.replace('\n', '').split('=') for line in settingsFile.readlines()]
+    settingsFile.close()
 
-    btn = Button(NavBar, text = 'Exit', command = mainScreen.destroy)
-    btn.pack(side = 'left')
-
-    mapbtn = Button(NavBar, text = 'Generate Maps', command = GenerateMaps)
-    mapbtn.pack(side = 'left')
-
-    btn2 = Button(NavBar, text="Settings", command = defineSettings)
-    btn2.pack(side = 'left')
-
-    #btn2 = Button(NavBar, text="Settings", command = newSettings)
-    #btn2.pack(side = 'left')
-
-
-    mainScreen.attributes('-alpha')
-    mainScreen.iconphoto(False, icon) 
-    mainScreen.title("  Minecraft Exporter")
-    mainScreen.configure(background = 'black')
-    mainScreen.geometry("450x500")
-    mainScreen.resizable(width=True, height=True)
-
-    canvas = tk.Canvas(mainScreen, width=256, height=256)
-    setBackground(256,256,back)
-
-    #background = Image.open('Graphics\Icon.png')
-    #setBackground(128,128, background)
-
-    if (len(settingsList) < 4):
+    if (len(settingsList) < 5):
         messagebox.showerror("Error", "Settings need to be generated before program can run")
         defineSettings()
     elif (settingsList[3][1] == ''):
         messagebox.showerror("Error", "Settings need to be generated before program can run")
         defineSettings()
+    
+    NavBar = Frame(mainScreen, background='white')
+    NavBar.pack(fill=X)
+    
+    mb = tk.Menubutton(NavBar, text="File", background='white', activebackground='#E5F3FF', bd=0)
+    mb.menu = tk.Menu( mb, tearoff = 0 )
+    mb["menu"] =  mb.menu
+    
+    mb.menu.add_command(label="Load Image", command = partial(ImageOpen, '', False))
+    menu = tk.Menu( mb, tearoff = 0 )
+    count = 0
+    if settingsList[4][0] != '':
+        for item in settingsList[4]:
+            count += 1
+            menu.add_command(label=str(count) + ". " + os.path.basename(item), command = partial(ImageOpen, item, True))
+        mb.menu.add_cascade(label="Recent Images", menu=menu)
+    
+    mb.menu.add_separator()
+    mb.menu.add_command(label='Save', command = lambda: saveFile(App.orig_img, App.path))
+    mb.menu.add_command(label='Save As', command = lambda: saveFile(App.orig_img, filedialog.askopenfilename(initialdir = settingsList[1][1], parent=mainScreen, title='Save File as:')))
+
+    mb.menu.add_separator()
+    mb.menu.add_command(label='Exit', command = endProgram)
+    mb.pack(side = 'left')
+
+    mb = tk.Menubutton(NavBar, text="Settings", background='white', activebackground='#E5F3FF', bd=0)
+    mb.menu = tk.Menu( mb, tearoff = 0 )
+    mb["menu"] =  mb.menu
+    
+    merge = tk.BooleanVar()
+    merge.set(bool(settingsList[2][1]))
+    extra = tk.BooleanVar()
+    extra.set(bool(settingsList[3][1]))
+
+    mb.menu.add_command(label='All Settings', command = defineSettings)
+    mb.menu.add_separator()    
+    mb.menu.add_command(label='Map Locations', command = lambda: newSettings(0, filedialog.askdirectory(parent=mainScreen, title='Find The Minecraft Saves Folder')))
+    mb.menu.add_command(label='Image Locations', command = lambda: newSettings(1, filedialog.askdirectory(parent=mainScreen, title='Find Where Files Should Be Saved')))
+    mb.menu.add_separator()
+    mb.menu.add_checkbutton(label='Merge Images', variable=merge, command = lambda: newSettings(2, merge.get()))
+    mb.menu.add_checkbutton(label='Banner/Item Frames', variable=extra, command = lambda: newSettings(3, extra.get()))
+    mb.pack(side = 'left')
+
+    map = HoverButton(NavBar, text = 'Generate Maps', command = GenerateMaps, background='white', activebackground='#E5F3FF', bd=0)
+    map.pack(side = 'left')
+
+    sprites = Image.open('Sprites.png').convert("RGBA")
+
+    spr1 = ImageTk.PhotoImage(sprites.crop((8, 0, 16, 8)).resize((16,16), Image.Resampling.NEAREST))
+    ico1 = HoverButton(NavBar, image=spr1, command = partial(AddIcons, 'mansion'), background='white', activebackground='#E5F3FF', bd=0)
+    ico1.pack(side = 'left')
+
+    spr2 = ImageTk.PhotoImage(sprites.crop((16, 0, 24, 8)).resize((16,16), Image.Resampling.NEAREST))
+    ico2 = HoverButton(NavBar, image=spr2, command = partial(AddIcons, 'monument'), background='white', activebackground='#E5F3FF', bd=0)
+    ico2.pack(side = 'left')
+
+    spr3 = ImageTk.PhotoImage(sprites.crop((24, 0, 32, 8)).resize((16,16), Image.Resampling.NEAREST))
+    ico3 = HoverButton(NavBar, image=spr3, command = partial(AddIcons, 'cross'), background='white', activebackground='#E5F3FF', bd=0)
+    ico3.pack(side = 'left')
+    
+    spr4 = ImageTk.PhotoImage(sprites.crop((0, 0, 8, 8)).resize((16,16), Image.Resampling.NEAREST))
+    mb = tk.Menubutton(NavBar, image=spr4, background='white', activebackground='#E5F3FF', bd=0)
+    mb.menu = tk.Menu( mb, tearoff = 0 )
+
+    mb.menu.add_command(label='North', command = partial(AddIcons, 'arrow'))
+    mb.menu.add_command(label='East', command = partial(AddIcons, 'arrow', 270))
+    mb.menu.add_command(label='South', command = partial(AddIcons, 'arrow', 180))
+    mb.menu.add_command(label='West', command = partial(AddIcons, 'arrow', 90))
+    mb["menu"] =  mb.menu
+    mb.pack(side = 'left')
+
+    spr5 = ImageTk.PhotoImage(sprites.crop((16, 16, 24, 24)).resize((16,16), Image.Resampling.NEAREST))
+    mb = tk.Menubutton(NavBar, image=spr5, background='white', activebackground='#E5F3FF', bd=0)
+    mb.menu = tk.Menu( mb, tearoff = 0 )
+
+    for banner in bannerDict:
+        mb.menu.add_command(label=banner.replace('_', ' ').title(), command = partial(AddIcons, banner))
+    mb["menu"] =  mb.menu
+    mb.pack(side = 'left')
+
+    mainScreen.attributes('-alpha')
+    mainScreen.iconphoto(False, icon) 
+    mainScreen.title("  Minecraft Exporter")
+    mainScreen.configure(background = 'black')
+    mainScreen.resizable(width=True, height=True)
+
+    canvas = tk.Canvas(mainScreen, width=256, height=256)
+    setBackground(256,256,back, '')
 
     mainScreen.mainloop()

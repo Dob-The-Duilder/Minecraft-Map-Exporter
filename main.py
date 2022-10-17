@@ -1,4 +1,4 @@
-import os, time, time, numpy, zoom
+import os, time, time, numpy
 from tkinter import Tk, PhotoImage, filedialog, messagebox
 from tkinter import *
 import tkinter as tk
@@ -7,7 +7,7 @@ from itertools import repeat
 from functools import partial
 from multiprocessing import Pool,freeze_support
 
-import mapGen
+import mapGen, zoom
 iconDict = {
     'arrow'     : (0, 0),
     'mansion'   : (1, 0),

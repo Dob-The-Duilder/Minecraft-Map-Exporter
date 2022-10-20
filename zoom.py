@@ -36,14 +36,22 @@ class LoadImage:
         scaleX = int(610/self.wid)
         scaleZ = int(610/self.hei)
         self.scale = max(min(scaleX, scaleZ), 1)
-        self.orig_img = self.orig_img.resize(((self.wid*self.scale), (self.hei*self.scale)),Image.Resampling.NEAREST)
+        self.zoomScale = 1
+        self.orig_img = self.orig_img.resize((self.wid*self.scale, self.hei*self.scale),Image.Resampling.NEAREST)
         self.wid, self.hei = self.orig_img.size
+        self.backImg = self.orig_img
+        self.widBack, self.heiBack = self.backImg.size
 
-        root.geometry(str(self.wid) + 'x' + str(self.hei+25))
+        if self.wid > 900 or self.hei > 900:
+            self.zoomScale = 2
+            self.backImg = self.backImg.resize((int(self.wid*0.5), int(self.hei*0.5)),Image.Resampling.NEAREST)
+            self.widBack, self.heiBack = self.backImg.size
+
+        root.geometry(str(self.widBack) + 'x' + str(self.heiBack+25))
         
         File2 = "overlay.png"
         self.spy = Image.open(File2)
-        self.spyWid, self.spyHei = self.orig_img.size
+        self.spyWid, self.spyHei = self.backImg.size
         
         self.sprites = Image.open('Sprites.png')
         self.sprite = None
@@ -54,7 +62,7 @@ class LoadImage:
         self.canvas.pack()
         self.frame.pack()
         self.filter = Image.Resampling.NEAREST
-        self.img = ImageTk.PhotoImage(self.orig_img)
+        self.img = ImageTk.PhotoImage(self.backImg)
         self.image_container = self.canvas.create_image(0,0,image=self.img, anchor="nw")
 
         self.zoomcycle = 0
@@ -65,16 +73,17 @@ class LoadImage:
         self.canvas.bind("<Motion>",self.crop)
 
     def stamp(self,event):
-        if self.sprite:
+        if self.sprite and (0 < self.x < self.widBack-1)and (0 < self.y < self.heiBack-1):
             tmp = self.orig_img
-            sprite = self.sprite.resize((8*self.scale, 8*self.scale), self.filter).convert("RGBA")
+            sprite = self.sprite.resize(( 8*self.scale, 8*self.scale), self.filter).convert("RGBA")
             tmp.paste(sprite, (int(self.x-sprite.width/2),int(self.y-sprite.height/2)), sprite)
             self.icon, self.sprite = None, None
             self.orig_img = tmp
-            self.img = ImageTk.PhotoImage(self.orig_img)
+            if self.zoomScale == 2:
+                tmp = tmp.resize((int(self.wid*0.5), int(self.hei*0.5)),Image.Resampling.NEAREST)
+            self.img = ImageTk.PhotoImage(tmp)
             self.canvas.itemconfig(self.image_container,image=self.img)
             self.sprite = None
-
 
     def zoomer(self,event):
         if (event.delta > 0):
@@ -84,7 +93,7 @@ class LoadImage:
         self.crop(event)
 
     def crop(self,event):
-        self.x,self.y = int(event.x/self.scale) * self.scale , int(event.y/self.scale) * self.scale
+        self.x,self.y = int(event.x/self.scale) * self.scale * self.zoomScale, int(event.y/self.scale) * self.scale * self.zoomScale
         if self.zimg_id: self.canvas.delete(self.zimg_id)
         if (self.zoomcycle) != 0:
             if self.zoomcycle == 1:

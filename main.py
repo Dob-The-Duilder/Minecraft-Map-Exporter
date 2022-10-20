@@ -56,7 +56,7 @@ def setBackground(X,Z,bigImg,path,recent = False):
 
     if (X/Z > 4) or (X/Z < 0.25):
         messagebox.showerror("Error", "Image proportions too large. Your image has been saved but the background has not been updated.")
-        setBackground(256,256,back)
+        setBackground(256,256,background)
         pass
 
     if path != '' and not(recent):
@@ -64,7 +64,7 @@ def setBackground(X,Z,bigImg,path,recent = False):
         settingsList[4].insert(0, path)
         if len(settingsList[4]) > 5: settingsList[4].pop(5)
         for setting in settingsList:
-            line = '='.join(setting) + '\n'
+            line = '='.join(str(e) for e in setting) + '\n'
             settingsFile.write(line)
         settingsFile.close()
 
@@ -81,14 +81,21 @@ def GenerateMaps():
     fileList = filedialog.askopenfilenames(initialdir = settingsList[0][1], parent=mainScreen, title='Choose a file')
     
     t0 = time.time()
+
     with Pool() as pool:
-        results = pool.starmap(mapGen.makeMaps, zip(repeat(settingsList[1][1]), fileList, repeat(bool(settingsList[2][1])), repeat(bool(settingsList[3][1]))))
+        results = pool.starmap(mapGen.makeMaps, zip(repeat(settingsList[1][1]), fileList, repeat(eval(settingsList[2][1])), repeat(eval(settingsList[3][1]))))
+    
     t1 = time.time()
-    if bool(settingsList[2][1]):
+    if eval(settingsList[2][1]):
         resNew = numpy.swapaxes(numpy.array(results, dtype="object"), 0, 1)
-        results.append(mapGen.imageCombine(resNew[4], resNew[5], resNew[2], resNew[3], settingsList[1][1]))
-    if len(results[-1][-1]) > 0:
-        messagebox.showerror("Error", results[-1][-1])
+        if eval(settingsList[5][1]):
+            results.append(mapGen.imageCombineMulti(resNew[4], resNew[5], resNew[2], resNew[3], settingsList[1][1]))
+        else:
+            results.append(mapGen.imageCombine(resNew[4], resNew[5], resNew[2], resNew[3], settingsList[1][1]))
+        
+        if len(results[-1][-1]) > 0:
+            messagebox.showerror("Error", results[-1][-1])
+
     
     var = results[-1]
         
@@ -118,6 +125,9 @@ def defineSettings():
     settingsList[3][1] = messagebox.askyesno("Extras","Do you want to add map icons?\n(Banners and Item Frame Locations)")
     
     settingsList.append(['icon.png'])
+
+    settingsList.append(['scaleMerge', ''])
+    settingsList[2][1] = messagebox.askyesno("Scaled Merging","Do you want to merge images of diffrent scales?")
         
     settingsFile = open('settings.txt', 'w')
     
@@ -127,7 +137,7 @@ def defineSettings():
     settingsFile.close()
     
 def newSettings(num, val):
-    settingsList[num][1] = val
+    settingsList[num][1] = str(val)
 
     settingsFile = open('settings.txt', 'w')
     for setting in settingsList:
@@ -174,10 +184,10 @@ if __name__ == "__main__":
     settingsList = [line.replace('\n', '').split('=') for line in settingsFile.readlines()]
     settingsFile.close()
 
-    if (len(settingsList) < 5):
+    if (len(settingsList) < 6):
         messagebox.showerror("Error", "Settings need to be generated before program can run")
         defineSettings()
-    elif (settingsList[3][1] == ''):
+    elif (settingsList[5][0] == ''):
         messagebox.showerror("Error", "Settings need to be generated before program can run")
         defineSettings()
     
@@ -210,9 +220,11 @@ if __name__ == "__main__":
     mb["menu"] =  mb.menu
     
     merge = tk.BooleanVar()
-    merge.set(bool(settingsList[2][1]))
+    merge.set(eval(settingsList[2][1]))
+    scaleMerge = tk.BooleanVar()
+    scaleMerge.set(eval(settingsList[5][1]))
     extra = tk.BooleanVar()
-    extra.set(bool(settingsList[3][1]))
+    extra.set(eval(settingsList[3][1]))
 
     mb.menu.add_command(label='All Settings', command = defineSettings)
     mb.menu.add_separator()    
@@ -220,6 +232,7 @@ if __name__ == "__main__":
     mb.menu.add_command(label='Image Locations', command = lambda: newSettings(1, filedialog.askdirectory(parent=mainScreen, title='Find Where Files Should Be Saved')))
     mb.menu.add_separator()
     mb.menu.add_checkbutton(label='Merge Images', variable=merge, command = lambda: newSettings(2, merge.get()))
+    mb.menu.add_checkbutton(label='Scaled Merge', variable=scaleMerge, command = lambda: newSettings(5, scaleMerge.get()))
     mb.menu.add_checkbutton(label='Banner/Item Frames', variable=extra, command = lambda: newSettings(3, extra.get()))
     mb.pack(side = 'left')
 

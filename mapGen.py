@@ -155,6 +155,61 @@ def imageCombine(coordsX, coordsZ, imgList, sizList, folder_path):
     
     return [(max(coordsX)-min(coordsX)+128),(max(coordsZ)-min(coordsZ)+128),combo, folder_path + '/Full Map.png', '']
 
+def imageCombineMulti(coordsX, coordsZ, imgList, sizList, folder_path):
+    if len(sizList) == 0:
+        return [128,128, imgList[0], 'Not enought images.']
+
+    zoom0, zoom1, zoom2, zoom3, zoom4, btmRt = [],[],[],[],[],[]
+
+    for item in range(0, len(imgList), 1):
+        if sizList[item] > 0:
+            size = 128*(2**sizList[item]),128*(2**sizList[item])
+            imgList[item] = imgList[item].resize(size, Image.Resampling.NEAREST)
+        if sizList[item] == 4: 
+            zoom4.append(item)
+            coordsX[item] -= 1024
+            coordsZ[item] -= 1024
+            btmRt.append((coordsX[item] + 2048, coordsZ[item] + 2048))
+        elif sizList[item] == 3: 
+            zoom3.append(item)
+            coordsX[item] -= 512
+            coordsZ[item] -= 512
+            btmRt.append((coordsX[item] + 1024, coordsZ[item] + 1024))
+        elif sizList[item] == 2: 
+            zoom2.append(item)
+            coordsX[item] -= 256
+            coordsZ[item] -= 256
+            btmRt.append((coordsX[item] + 512, coordsZ[item] + 512))
+        elif sizList[item] == 1: 
+            zoom1.append(item)
+            coordsX[item] -= 128
+            coordsZ[item] -= 128
+            btmRt.append((coordsX[item] + 256, coordsZ[item] + 256))
+        else: 
+            zoom0.append(item)
+            coordsX[item] -= 64
+            coordsZ[item] -= 64
+            btmRt.append((coordsX[item] + 128, coordsZ[item] + 128))
+    
+    image_size = 2048,2048
+    image_size = (int((max(btmRt, key=lambda tup: tup[0])[0]-min(coordsX)+(2**max(sizList)*128))/2),int((max(btmRt, key=lambda tup: tup[1])[1]-min(coordsZ)+(2**max(sizList)*128))/2))
+    combo = Image.new('RGB', image_size)
+
+    for index in zoom4:
+        combo.paste(imgList[index], ((coordsX[index]-min(coordsX)),(coordsZ[index]-min(coordsZ))))
+    for index in zoom3:
+        combo.paste(imgList[index], ((coordsX[index]-min(coordsX)),(coordsZ[index]-min(coordsZ))))
+    for index in zoom2:
+        combo.paste(imgList[index], ((coordsX[index]-min(coordsX)),(coordsZ[index]-min(coordsZ))))
+    for index in zoom1:
+        combo.paste(imgList[index], ((coordsX[index]-min(coordsX)),(coordsZ[index]-min(coordsZ))))
+    for index in zoom0:
+        combo.paste(imgList[index], ((coordsX[index]-min(coordsX)),(coordsZ[index]-min(coordsZ))))
+
+    combo.save(folder_path + '/Full Map.png')
+    
+    return [(max(coordsX)-min(coordsX)+128),(max(coordsZ)-min(coordsZ)+128),combo, folder_path + '/Full Map.png', '']
+
 def write_string(stream, string):
     stream.write(len(string).to_bytes(2, byteorder='big', signed=False))
     for c in string:

@@ -100,6 +100,15 @@ def GenerateMaps():
     var = results[-1]
         
     setBackground(var[0],var[1],var[2], var[3])
+    
+def GenerateImages():
+    global settingsList
+    
+    imgFile = filedialog.askopenfilename(initialdir = settingsList[0][1], parent=mainScreen, title='Choose a Image File')
+    
+    donorFile = filedialog.askopenfilename(initialdir = settingsList[0][1], parent=mainScreen, title='Choose a Donar DAT File', filetypes=[("Minecraft Map File", ".dat")])
+
+    setBackground(128, 128, mapGen.makeImgs(imgFile, donorFile), '', recent=True)
 
 def AddIcons(item, rotation = 0):
     App.rotation = rotation
@@ -236,8 +245,11 @@ if __name__ == "__main__":
     mb.menu.add_checkbutton(label='Banner/Item Frames', variable=extra, command = lambda: newSettings(3, extra.get()))
     mb.pack(side = 'left')
 
-    map = HoverButton(NavBar, text = 'Generate Maps', command = GenerateMaps, background='white', activebackground='#E5F3FF', bd=0)
+    map = HoverButton(NavBar, text = 'Generate Images', command = GenerateMaps, background='white', activebackground='#E5F3FF', bd=0)
     map.pack(side = 'left')
+    
+    itm = HoverButton(NavBar, text = 'Generate Maps', command = GenerateImages, background='white', activebackground='#E5F3FF', bd=0)
+    itm.pack(side = 'left')
 
     sprites = Image.open('Sprites.png').convert("RGBA")
 

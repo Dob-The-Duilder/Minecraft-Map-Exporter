@@ -1,6 +1,5 @@
-import os, time, time, numpy
-from tkinter import Tk, PhotoImage, filedialog, messagebox
-from tkinter import *
+import os, time, numpy
+from tkinter import Tk, PhotoImage, filedialog, messagebox, Frame, X
 import tkinter as tk
 from PIL import Image, ImageTk
 from itertools import repeat
@@ -36,7 +35,8 @@ def error():
    messagebox.showerror("Error", "A faital error occured.")
 
 def ImageOpen(path, recent):
-    if path == '': path = filedialog.askopenfilename(initialdir = settingsList[1][1], parent=mainScreen, title='Choose an Image File.')
+    if path == '': 
+        path = filedialog.askopenfilename(initialdir = settingsList[1][1], parent=mainScreen, title='Choose an Image File.')
     newImg = Image.open(path)
     if recent:
         setBackground(newImg.width,newImg.height,newImg,path,recent)
@@ -51,7 +51,7 @@ def setBackground(X,Z,bigImg,path,recent = False):
 
     try:
         App.delete()
-    except:
+    except NameError:
         pass
 
     if (X/Z > 4) or (X/Z < 0.25):
@@ -62,7 +62,10 @@ def setBackground(X,Z,bigImg,path,recent = False):
     if path != '' and not(recent):
         settingsFile = open('settings.txt', 'w')
         settingsList[4].insert(0, path)
-        if len(settingsList[4]) > 5: settingsList[4].pop(5)
+        
+        if len(settingsList[4]) > 5: 
+            settingsList[4].pop(5)
+            
         for setting in settingsList:
             line = '='.join(str(e) for e in setting) + '\n'
             settingsFile.write(line)
@@ -85,7 +88,7 @@ def GenerateMaps():
     with Pool() as pool:
         results = pool.starmap(mapGen.makeMaps, zip(repeat(settingsList[1][1]), fileList, repeat(eval(settingsList[2][1])), repeat(eval(settingsList[3][1]))))
     
-    t1 = time.time()
+    print(time.time() - t0)
     if eval(settingsList[2][1]):
         resNew = numpy.swapaxes(numpy.array(results, dtype="object"), 0, 1)
         if eval(settingsList[5][1]):
@@ -154,7 +157,6 @@ def newSettings(num, val):
         settingsFile.write(line)
     settingsFile.close()
      
-
 def endProgram():
     App.delete()
     mainScreen.destroy()
@@ -189,7 +191,7 @@ if __name__ == "__main__":
     icon = PhotoImage(file = ("Icon.png"))
     back = Image.open("Icon.png")
 
-    settingsFile = open('settings.txt', 'r')
+    settingsFile = open('settings.txt')
     settingsList = [line.replace('\n', '').split('=') for line in settingsFile.readlines()]
     settingsFile.close()
 

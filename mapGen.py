@@ -1,7 +1,6 @@
 import numpy as np
 from PIL import Image
 import gzip, os, struct
-from math import sqrt
 
 import nbtlib
 from nbtlib.tag import ByteArray
@@ -55,11 +54,13 @@ def closest_color(color, colors):
     return tuple(smallest_distance[0])
 
 def makeImgs(imagePath, nbtPath):        
-    img = Image.open(imagePath)
+    img = Image.open(imagePath).convert('RGB')
     pixels = []
     colors = []
 
     if (img.size != (128, 128)): img = img.resize((128, 128))
+    
+    print(img.getpixel((0,0)))
     
     for y in range(0, 128, 1):
         for x in range(0, 128, 1):
@@ -181,7 +182,6 @@ def imageCombine(coordsX, coordsZ, imgList, sizList, folder_path):
         return [128,128, imgList[0], 'Not enought images.']
     if (np.max(sizList) != np.min(sizList)): 
         return [128,128, imgList[0], 'Maps are not the same scale.']
-    scale = sizList[0]
 
     image_size = ((max(coordsX)-min(coordsX)+128),(max(coordsZ)-min(coordsZ)+128))
     combo = Image.new('RGB', image_size)
@@ -189,7 +189,7 @@ def imageCombine(coordsX, coordsZ, imgList, sizList, folder_path):
         combo.paste(imgList[i], ((coordsX[i]-min(coordsX)),(coordsZ[i]-min(coordsZ))))
         combo.save(folder_path + '/Full Map.png')
     
-    return [(max(coordsX)-min(coordsX)+128),(max(coordsZ)-min(coordsZ)+128),combo, folder_path + '/Full Map.png', '']
+    return [image_size[0],image_size[1],combo, folder_path + '/Full Map.png', '']
 
 def imageCombineMulti(coordsX, coordsZ, imgList, sizList, folder_path):
     if len(sizList) == 0:
@@ -228,7 +228,7 @@ def imageCombineMulti(coordsX, coordsZ, imgList, sizList, folder_path):
             btmRt.append((coordsX[item] + 128, coordsZ[item] + 128))
     
     image_size = 2048,2048
-    image_size = (int((max(btmRt, key=lambda tup: tup[0])[0]-min(coordsX)+(2**max(sizList)*128))/2),int((max(btmRt, key=lambda tup: tup[1])[1]-min(coordsZ)+(2**max(sizList)*128))/2))
+    image_size = (max(btmRt, key=lambda tup: tup[0])[0]-min(coordsX),max(btmRt, key=lambda tup: tup[1])[1]-min(coordsZ))
     combo = Image.new('RGB', image_size)
 
     for index in zoom4:
@@ -244,7 +244,7 @@ def imageCombineMulti(coordsX, coordsZ, imgList, sizList, folder_path):
 
     combo.save(folder_path + '/Full Map.png')
     
-    return [(max(coordsX)-min(coordsX)+128),(max(coordsZ)-min(coordsZ)+128),combo, folder_path + '/Full Map.png', '']
+    return [image_size[0],image_size[1],combo, folder_path + '/Full Map.png', '']
 
 def write_string(stream, string):
     stream.write(len(string).to_bytes(2, byteorder='big', signed=False))
@@ -366,7 +366,7 @@ def create_array_nbt_class(tag_id, tag_name, sub_type):
         def parse(cls, stream, name):
             payload_length = int.from_bytes(stream.read(4), byteorder='big', signed=True)
             tag = cls(tag_name=name)
-            for i in range(payload_length):
+            for _i in range(payload_length):
                 tag.add_child(cls.clazz_sub_type.parse(stream, 'None'))
             return tag
 
@@ -407,7 +407,7 @@ def create_array_nbt_class(tag_id, tag_name, sub_type):
         def __eq__(self, other):
             return self.tag_name == other.tag_name and \
                 len(self.children) == len(other.children) and \
-                not any([not self.children[i] == other.children[i] for i in range(len(self.children))])
+                not any(not self.children[i] == other.children[i] for i in range(len(self.children)))
 
     register_parser(tag_id, ArrayNBTTag)
 
@@ -425,7 +425,7 @@ def create_list_nbt_class(tag_id):
             sub_type = int.from_bytes(stream.read(1), byteorder='big', signed=False)
             payload_length = int.from_bytes(stream.read(4), byteorder='big', signed=True)
             tag = cls(sub_type, tag_name=name)
-            for i in range(payload_length):
+            for _i in range(payload_length):
                 tag.add_child(_parsers[sub_type].parse(stream, 'None'))
             return tag
 
@@ -469,7 +469,7 @@ def create_list_nbt_class(tag_id):
         def __eq__(self, other):
             return self.tag_name == other.tag_name and \
                 len(self.children) == len(other.children) and \
-                (len(self.children) == 0 or not any([not self.children[i] == other.children[i] for i in range(len(self.children))]))
+                (len(self.children) == 0 or not any(not self.children[i] == other.children[i] for i in range(len(self.children))))
 
     register_parser(tag_id, ListNBTTag)
 

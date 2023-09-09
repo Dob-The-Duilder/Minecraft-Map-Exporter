@@ -1,4 +1,4 @@
-import os, time, numpy
+import os, time, numpy, json
 from tkinter import Tk, PhotoImage, filedialog, messagebox, Frame, X
 import tkinter as tk
 from PIL import Image, ImageTk
@@ -7,36 +7,22 @@ from functools import partial
 from multiprocessing import Pool,freeze_support
 
 import mapGen, zoom
-iconDict = {
-    'arrow'     : (0, 0),
-    'mansion'   : (1, 0),
-    'monument'  : (2, 0),
-    'cross'     : (3, 0)}
-bannerDict = {
-    'white'     : (0, 1),
-    'light_gray': (1, 1),
-    'gray'      : (2, 1),
-    'black'     : (3, 1),
-    'red'       : (0, 2),
-    'orange'    : (1, 2),
-    'yellow'    : (2, 2),
-    'lime'      : (3, 2),
-    'green'     : (0, 3),
-    'blue'      : (1, 3),
-    'cyan'      : (2, 3),
-    'light_blue': (3, 3),
-    'pink'      : (0, 4),
-    'magenta'   : (1, 4),
-    'purple'    : (2, 4),
-    'brown'     : (3, 4)
-    }
+sprites = {1:{"player_White":None, "player_Green":None, "player_Red":None, "player_Blue":None},
+            2:{"temple_Jungle Temple":None, "temple_Witch Hut":None, "temple_Woodland Mansion":None, "temple_Ocean Monument":None},
+            3:{"hamlet_Plains Village":None, "hamlet_Savanna Village":None, "hamlet_Snowy Village":None, "hamlet_Taiga Village":None},
+            4:{"hamlet_Desert Village":None, "unused_Red X":None, "unused_Target X":None, "unused_Target Point":None},
+            5:{"banner_White":None, "banner_Light Grey":None, "banner_Grey":None, "banner_Black":None},
+            6:{"banner_Red":None, "banner_Orange":None, "banner_Yellow":None, "banner_Lime":None},
+            7:{"banner_Green":None, "banner_Blue":None, "banner_Cyan":None, "banner_Light Blue":None},
+            8:{"banner_Pink":None, "banner_Magenta":None, "banner_Purple":None, "banner_Brown":None}}
 
 def error():
    messagebox.showerror("Error", "A faital error occured.")
 
 def ImageOpen(path, recent):
     if path == '': 
-        path = filedialog.askopenfilename(initialdir = settingsList[1][1], parent=mainScreen, title='Choose an Image File.')
+        path = filedialog.askopenfilename(initialdir = settingsJson["Path Settings"]["Load Path"]["data"],
+                                          parent=mainScreen, title='Choose an Image File.')
     newImg = Image.open(path)
     if recent:
         setBackground(newImg.width,newImg.height,newImg,path,recent)
@@ -60,16 +46,13 @@ def setBackground(X,Z,bigImg,path,recent = False):
         pass
 
     if path != '' and not(recent):
-        settingsFile = open('settings.txt', 'w')
-        settingsList[4].insert(0, path)
+        settingsJson["Recents"].insert(0, path)
         
-        if len(settingsList[4]) > 5: 
-            settingsList[4].pop(5)
+        if len(settingsJson["Recents"]) > settingsJson["Recent Max Count"]:
+            settingsJson["Recents"].pop()
             
-        for setting in settingsList:
-            line = '='.join(str(e) for e in setting) + '\n'
-            settingsFile.write(line)
-        settingsFile.close()
+        with open('settings.json', 'w') as settingsFile:
+            settingsFile.write(json.dumps(settingsJson, indent=4))
 
     App = zoom.LoadImage(mainScreen, bigImg, path)
     mainScreen.mainloop()
@@ -79,22 +62,25 @@ def saveFile(image, path):
     image.save(path)
 
 def GenerateMaps():
-    global settingsList
+    global settingsJson
     
-    fileList = filedialog.askopenfilenames(initialdir = settingsList[0][1], parent=mainScreen, title='Choose a file')
+    fileList = filedialog.askopenfilenames(initialdir = settingsJson["Path Settings"]["Load Path"]["data"],
+                                           parent=mainScreen, title='Choose a file')
     
     t0 = time.time()
 
     with Pool() as pool:
-        results = pool.starmap(mapGen.makeMaps, zip(repeat(settingsList[1][1]), fileList, repeat(eval(settingsList[2][1])), repeat(eval(settingsList[3][1]))))
+        results = pool.starmap(mapGen.makeMaps, zip(repeat(settingsJson["Path Settings"]["Save Path"]["data"]), fileList,
+                                                    repeat(settingsJson["Generator Settings"]["Basic Merging"]["data"]),
+                                                    repeat(settingsJson["Generator Settings"]["Additional Icons"]["data"])))
     
     print(time.time() - t0)
-    if eval(settingsList[2][1]):
+    if settingsJson["Generator Settings"]["Basic Merging"]["data"]:
         resNew = numpy.swapaxes(numpy.array(results, dtype="object"), 0, 1)
-        if eval(settingsList[5][1]):
-            results.append(mapGen.imageCombineMulti(resNew[4], resNew[5], resNew[2], resNew[3], settingsList[1][1]))
+        if settingsJson["Generator Settings"]["Scaled Merging"]["data"]:
+            results.append(mapGen.imageCombineMulti(resNew[4], resNew[5], resNew[2], resNew[3], settingsJson["Path Settings"]["Save Path"]["data"]))
         else:
-            results.append(mapGen.imageCombine(resNew[4], resNew[5], resNew[2], resNew[3], settingsList[1][1]))
+            results.append(mapGen.imageCombine(resNew[4], resNew[5], resNew[2], resNew[3], settingsJson["Path Settings"]["Save Path"]["data"]))
         
         if len(results[-1][-1]) > 0:
             messagebox.showerror("Error", results[-1][-1])
@@ -105,15 +91,16 @@ def GenerateMaps():
     setBackground(var[0],var[1],var[2], var[3])
     
 def GenerateImages():
-    global settingsList
+    global settingsJson
     
-    imgFile = filedialog.askopenfilename(initialdir = settingsList[0][1], parent=mainScreen, title='Choose a Image File')
+    imgFile = filedialog.askopenfilename(initialdir = settingsJson["Path Settings"]["Load Path"]["data"], parent=mainScreen, title='Choose a Image File')
     
-    donorFile = filedialog.askopenfilename(initialdir = settingsList[0][1], parent=mainScreen, title='Choose a Donar DAT File', filetypes=[("Minecraft Map File", ".dat")])
+    donorFile = filedialog.askopenfilename(initialdir = settingsJson["Path Settings"]["Load Path"]["data"], parent=mainScreen, title='Choose a Donar DAT File', filetypes=[("Minecraft Map File", ".dat")])
 
     setBackground(128, 128, mapGen.makeImgs(imgFile, donorFile), '', recent=True)
 
 def AddIcons(item, rotation = 0):
+    print(item)
     App.rotation = rotation
     if App.icon == item:
         App.icon = None
@@ -121,41 +108,47 @@ def AddIcons(item, rotation = 0):
         App.icon = item
 
 def defineSettings():
-    global settingsList
+    global settingsJson
+    settingsJson = {}
     
-    settingsList = []
-    settingsList.append(['LoadPath', ''])
-    settingsList[0][1] = filedialog.askdirectory(parent=mainScreen, title='Find The Minecraft Saves Folder')
     
-    settingsList.append(['SavesPath', ''])
-    settingsList[1][1] = filedialog.askdirectory(parent=mainScreen, title='Find Where Files Should Be Saved')
+    settingsJson["Path Settings"] = {}
     
-    settingsList.append(['merge', ''])
-    settingsList[2][1] = messagebox.askyesno("Merging","Do you want to automatically merge images?")
+    settingsJson["Path Settings"]["Load"] = {"type": "Path"}
+    settingsJson["Path Settings"]["Load"]   ["data"] = filedialog.askdirectory(parent=mainScreen,
+                                                        title='Find The Minecraft Saves Folder')
     
-    settingsList.append(['extras', ''])
-    settingsList[3][1] = messagebox.askyesno("Extras","Do you want to add map icons?\n(Banners and Item Frame Locations)")
+    settingsJson["Path Settings"]["Save"] = {"type": "Path"}
+    settingsJson["Path Settings"]["Save"]   ["data"] = filedialog.askdirectory(parent=mainScreen,
+                                                 title='Find Where Files Should Be Saved')
     
-    settingsList.append(['icon.png'])
-
-    settingsList.append(['scaleMerge', ''])
-    settingsList[2][1] = messagebox.askyesno("Scaled Merging","Do you want to merge images of diffrent scales?")
-        
-    settingsFile = open('settings.txt', 'w')
     
-    for setting in settingsList:
-        line = '='.join(str(e) for e in setting) + '\n'
-        settingsFile.write(line)
-    settingsFile.close()
+    settingsJson["Generator Settings"] = {}
     
-def newSettings(num, val):
-    settingsList[num][1] = str(val)
-
-    settingsFile = open('settings.txt', 'w')
-    for setting in settingsList:
-        line = '='.join(str(e) for e in setting) + '\n'
-        settingsFile.write(line)
-    settingsFile.close()
+    settingsJson["Generator Settings"]["Basic Merging"] = {}
+    settingsJson["Generator Settings"]["Basic Merging"]["type"] = "Check"
+    settingsJson["Generator Settings"]["Basic Merging"]["data"] = messagebox.askyesno("Basic Merging","Do you want to automatically merge images?")
+    
+    settingsJson["Generator Settings"]["Additional Icons"] = {}
+    settingsJson["Generator Settings"]["Additional Icons"]["type"] = "Check"
+    settingsJson["Generator Settings"]["Additional Icons"]["data"] = messagebox.askyesno("Additional Icons","Do you want to add map icons?\n(Banners and Item Frame Locations)")
+    
+    settingsJson["Generator Settings"]["Scaled Merging"] = {}
+    settingsJson["Generator Settings"]["Scaled Merging"]["type"] = "Check"
+    settingsJson["Generator Settings"]["Scaled Merging"]["data"] = messagebox.askyesno("Scaled Merging","Do you want to merge images of diffrent scales?")
+    settingsJson["Generator Settings"]["Scaled Merging"]["reqr"] = "Basic Merging"
+    
+    settingsJson["Recent Max Count"] = 5
+    settingsJson["Recents"] = ["icon.png"]
+    
+    with open('settings.json', 'w') as settingsFile:
+        settingsFile.write(json.dumps(settingsJson, indent=4))
+    
+def newSettings(parent, name, val):
+    settingsJson[parent][name]["data"] = val
+    
+    with open('settings.json', 'w') as settingsFile:
+        settingsFile.write(json.dumps(settingsJson, indent=4))
      
 def endProgram():
     App.delete()
@@ -182,25 +175,17 @@ if __name__ == "__main__":
     path = os.path.abspath(__file__)
     local = path.replace(os.path.basename(path), '')
 
-    if not os.path.exists(local + 'settings.txt'):
-        with open(os.path.join(local, 'settings.txt'), 'w') as fp:
+    if not os.path.exists(local + 'settings.json'):
+        with open(os.path.join(local, 'settings.json'), 'w') as fp:
             pass
     
     mainScreen = Tk()
 
-    icon = PhotoImage(file = ("Icon.png"))
+    ico = PhotoImage(file = "Icon.png")
     back = Image.open("Icon.png")
 
-    settingsFile = open('settings.txt')
-    settingsList = [line.replace('\n', '').split('=') for line in settingsFile.readlines()]
-    settingsFile.close()
-
-    if (len(settingsList) < 6):
-        messagebox.showerror("Error", "Settings need to be generated before program can run")
-        defineSettings()
-    elif (settingsList[5][0] == ''):
-        messagebox.showerror("Error", "Settings need to be generated before program can run")
-        defineSettings()
+    with open('settings.json') as settingsFile:
+        settingsJson = json.loads(settingsFile.read())
     
     NavBar = Frame(mainScreen, background='white')
     NavBar.pack(fill=X)
@@ -211,16 +196,13 @@ if __name__ == "__main__":
     
     mb.menu.add_command(label="Load Image", command = partial(ImageOpen, '', False))
     menu = tk.Menu( mb, tearoff = 0 )
-    count = 0
-    if settingsList[4][0] != '':
-        for item in settingsList[4]:
-            count += 1
-            menu.add_command(label=str(count) + ". " + os.path.basename(item), command = partial(ImageOpen, item, True))
-        mb.menu.add_cascade(label="Recent Images", menu=menu)
+    for count, item in enumerate(settingsJson["Recents"]):
+        menu.add_command(label=str(count) + ". " + os.path.basename(item), command = partial(ImageOpen, item, True))
+    mb.menu.add_cascade(label="Recent Images", menu=menu)
     
     mb.menu.add_separator()
     mb.menu.add_command(label='Save', command = lambda: saveFile(App.orig_img, App.path))
-    mb.menu.add_command(label='Save As', command = lambda: saveFile(App.orig_img, filedialog.askopenfilename(initialdir = settingsList[1][1], parent=mainScreen, title='Save File as:')))
+    mb.menu.add_command(label='Save As', command = lambda: saveFile(App.orig_img, filedialog.askopenfilename(initialdir = settingsJson["Path Settings"]["Save Path"]["data"], parent=mainScreen, title='Save File as:')))
 
     mb.menu.add_separator()
     mb.menu.add_command(label='Exit', command = endProgram)
@@ -230,21 +212,20 @@ if __name__ == "__main__":
     mb.menu = tk.Menu( mb, tearoff = 0 )
     mb["menu"] =  mb.menu
     
-    merge = tk.BooleanVar()
-    merge.set(eval(settingsList[2][1]))
-    scaleMerge = tk.BooleanVar()
-    scaleMerge.set(eval(settingsList[5][1]))
-    extra = tk.BooleanVar()
-    extra.set(eval(settingsList[3][1]))
-
     mb.menu.add_command(label='All Settings', command = defineSettings)
-    mb.menu.add_separator()    
-    mb.menu.add_command(label='Map Locations', command = lambda: newSettings(0, filedialog.askdirectory(parent=mainScreen, title='Find The Minecraft Saves Folder')))
-    mb.menu.add_command(label='Image Locations', command = lambda: newSettings(1, filedialog.askdirectory(parent=mainScreen, title='Find Where Files Should Be Saved')))
-    mb.menu.add_separator()
-    mb.menu.add_checkbutton(label='Merge Images', variable=merge, command = lambda: newSettings(2, merge.get()))
-    mb.menu.add_checkbutton(label='Scaled Merge', variable=scaleMerge, command = lambda: newSettings(5, scaleMerge.get()))
-    mb.menu.add_checkbutton(label='Banner/Item Frames', variable=extra, command = lambda: newSettings(3, extra.get()))
+    
+    settingsMenu = {}
+    for parent, group in settingsJson.items():
+        if not isinstance(group, dict): continue
+        for name, setting  in group.items():
+            match setting["type"]:
+                case "Path":
+                    mb.menu.add_command(label=name, command = lambda parent = parent, name = name: newSettings(parent, name, filedialog.askdirectory(parent=mainScreen, title='')))
+                case "Check":
+                    settingsMenu[name] = tk.BooleanVar()
+                    settingsMenu[name].set(settingsJson[parent][name]["data"])
+                    mb.menu.add_checkbutton(label=name, variable=settingsMenu[name], command = lambda  parent = parent, name = name, bool=settingsMenu[name]: newSettings(parent, name, bool.get()))
+        mb.menu.add_separator()    
     mb.pack(side = 'left')
 
     map = HoverButton(NavBar, text = 'Generate Images', command = GenerateMaps, background='white', activebackground='#E5F3FF', bd=0)
@@ -253,42 +234,25 @@ if __name__ == "__main__":
     itm = HoverButton(NavBar, text = 'Generate Maps', command = GenerateImages, background='white', activebackground='#E5F3FF', bd=0)
     itm.pack(side = 'left')
 
-    sprites = Image.open('Sprites.png').convert("RGBA")
-
-    spr1 = ImageTk.PhotoImage(sprites.crop((8, 0, 16, 8)).resize((16,16), Image.Resampling.NEAREST))
-    ico1 = HoverButton(NavBar, image=spr1, command = partial(AddIcons, 'mansion'), background='white', activebackground='#E5F3FF', bd=0)
-    ico1.pack(side = 'left')
-
-    spr2 = ImageTk.PhotoImage(sprites.crop((16, 0, 24, 8)).resize((16,16), Image.Resampling.NEAREST))
-    ico2 = HoverButton(NavBar, image=spr2, command = partial(AddIcons, 'monument'), background='white', activebackground='#E5F3FF', bd=0)
-    ico2.pack(side = 'left')
-
-    spr3 = ImageTk.PhotoImage(sprites.crop((24, 0, 32, 8)).resize((16,16), Image.Resampling.NEAREST))
-    ico3 = HoverButton(NavBar, image=spr3, command = partial(AddIcons, 'cross'), background='white', activebackground='#E5F3FF', bd=0)
-    ico3.pack(side = 'left')
+    spritesRaw = Image.open('Sprites.png').convert("RGBA")
     
-    spr4 = ImageTk.PhotoImage(sprites.crop((0, 0, 8, 8)).resize((16,16), Image.Resampling.NEAREST))
-    mb = tk.Menubutton(NavBar, image=spr4, background='white', activebackground='#E5F3FF', bd=0)
-    mb.menu = tk.Menu( mb, tearoff = 0 )
+    spritesTemp = {}
+    for row, rowDict in sprites.items():
+        for column, name in enumerate(rowDict.keys()):
+            if name[:6] not in spritesTemp: spritesTemp[name[:6]] = {}
+            spritesTemp[name[:6]][name] = ImageTk.PhotoImage(spritesRaw.crop((column*8, row*8-8, column*8+8, row*8+8-8)).resize((16,16), Image.Resampling.NEAREST))
 
-    mb.menu.add_command(label='North', command = partial(AddIcons, 'arrow'))
-    mb.menu.add_command(label='East', command = partial(AddIcons, 'arrow', 270))
-    mb.menu.add_command(label='South', command = partial(AddIcons, 'arrow', 180))
-    mb.menu.add_command(label='West', command = partial(AddIcons, 'arrow', 90))
-    mb["menu"] =  mb.menu
-    mb.pack(side = 'left')
-
-    spr5 = ImageTk.PhotoImage(sprites.crop((16, 16, 24, 24)).resize((16,16), Image.Resampling.NEAREST))
-    mb = tk.Menubutton(NavBar, image=spr5, background='white', activebackground='#E5F3FF', bd=0)
-    mb.menu = tk.Menu( mb, tearoff = 0 )
-
-    for banner in bannerDict:
-        mb.menu.add_command(label=banner.replace('_', ' ').title(), command = partial(AddIcons, banner))
-    mb["menu"] =  mb.menu
-    mb.pack(side = 'left')
+    spritesMenu = {}
+    for name, group in spritesTemp.items():
+        spritesMenu[name] = tk.Menubutton(NavBar, image=list(group.values())[0], background='white', activebackground='#E5F3FF', bd=0)
+        spritesMenu[name].menu = tk.Menu(spritesMenu[name], tearoff = 0 )
+        for icon in group.keys():
+            spritesMenu[name].menu.add_command(label=icon[7:], command = partial(AddIcons, icon))
+        spritesMenu[name]["menu"] =  spritesMenu[name].menu
+        spritesMenu[name].pack(side = 'left')
 
     mainScreen.attributes('-alpha')
-    mainScreen.iconphoto(False, icon) 
+    mainScreen.iconphoto(False, ico) 
     mainScreen.title("  Minecraft Exporter")
     mainScreen.configure(background = 'black')
     mainScreen.resizable(width=True, height=True)

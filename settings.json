@@ -1,0 +1,30 @@
+{
+    "Path Settings": {
+        "Load Path": {
+            "type": "Path",
+            "data": ""
+        },
+        "Save Path": {
+            "type": "Path",
+            "data": ""
+        }
+    },
+    "Generator Settings": {
+        "Basic Merging": {
+            "type": "Check",
+            "data": true
+        },
+        "Additional Icons": {
+            "type": "Check",
+            "data": true
+        },
+        "Scaled Merging": {
+            "type": "Check",
+            "data": true,
+            "reqr": "Basic Merging"
+        }
+    },
+    "Recent Max Count": 5,
+    "Recents": [
+    ]
+}
